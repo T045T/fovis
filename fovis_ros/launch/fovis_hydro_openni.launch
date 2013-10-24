@@ -13,7 +13,7 @@
     <remap from="/camera/rgb/image_rect" to="$(arg camera)/rgb/image_rect_mono" />
     <remap from="/camera/rgb/camera_info" to="$(arg camera)/rgb/camera_info" />
     <remap unless="$(arg hw_registered)" from="/camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/sw_registered/camera_info" />
-    <remap if="$(arg hw_registered)" from="/camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/hw_registered/camera_info" />
+    <remap if="$(arg hw_registered)" from="/camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/camera_info" />
     <remap from="/camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/image_rect" />
     <param name="approximate_sync" type="bool" value="True" />
   </node>
