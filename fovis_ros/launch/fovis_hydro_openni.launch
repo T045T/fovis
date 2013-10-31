@@ -1,7 +1,12 @@
+<?xml version="1.0"?>
 <launch>
-  <!-- This should be the same as used with openni_launch -->
+  <!-- These should be the same as used with openni_launch -->
   <arg name="camera" default="camera" />
   <arg name="hw_registered" default="false" />
+
+  <arg name="odom_frame_id" default="/odom" />
+  <arg name="base_link_frame_id" default="/base_link" />
+  <arg name="publish_tf" default="true" />
   <node pkg="nodelet" type="nodelet" args="manager" name="nodelet_manager" />
   <node pkg="nodelet" type="nodelet" name="convert_openni_fovis" 
         args="load depth_image_proc/convert_metric nodelet_manager">
@@ -16,5 +21,8 @@
     <remap if="$(arg hw_registered)" from="/camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/camera_info" />
     <remap from="/camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/image_rect" />
     <param name="approximate_sync" type="bool" value="True" />
+    <param name="odom_frame_id" type="String" value="$(arg odom_frame_id)" />
+    <param name="base_link_frame_id" type="String" value="$(arg base_link_frame_id)" />
+    <param name="publish_tf" type="bool" value="$(arg publish_tf)" />
   </node>
 </launch>
