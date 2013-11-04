@@ -306,12 +306,12 @@ private:
   {
     std::string error_msg;
     if (tf_listener_.canTransform(
-          base_link_frame_id_, sensor_frame_id, stamp, &error_msg))
+          base_link_frame_id_, sensor_frame_id, ros::Time(), &error_msg))
     {
       tf_listener_.lookupTransform(
           base_link_frame_id_,
           sensor_frame_id,
-          stamp, base_to_sensor);
+          ros::Time(), base_to_sensor);
     }
     else
     {
