@@ -24,6 +24,20 @@ namespace fovis_ros
 class OdometerBase
 {
 
+public:
+  void publishLastKnownTf()
+  {
+    if ( publish_tf_ 
+         && (ros::Time::now() - last_published_tf_time_ > ros::Duration(9.0)))
+    {
+      last_published_tf_time_ = ros::Time::now();
+      tf_broadcaster_.sendTransform(
+        tf::StampedTransform(base_transform_, last_published_tf_time_,
+                             odom_frame_id_, base_link_frame_id_));
+      
+    }
+  }
+
 protected:
 
   OdometerBase() : 
@@ -34,6 +48,8 @@ protected:
     nh_local_("~"),
     it_(nh_local_)
   {
+    base_transform_.setIdentity();
+
     loadParams();
     odom_pub_ = nh_local_.advertise<nav_msgs::Odometry>("odometry", 1);
     pose_pub_ = nh_local_.advertise<geometry_msgs::PoseStamped>("pose", 1);
@@ -137,19 +153,19 @@ protected:
       getBaseToSensorTransform(
           image_msg->header.stamp, image_msg->header.frame_id, 
           current_base_to_sensor);
-      tf::Transform base_transform = 
+      base_transform_ = 
         initial_base_to_sensor_ * sensor_pose * current_base_to_sensor.inverse();
 
       // publish transform
       if (publish_tf_)
       {
         tf_broadcaster_.sendTransform(
-            tf::StampedTransform(base_transform, image_msg->header.stamp,
+            tf::StampedTransform(base_transform_, image_msg->header.stamp,
             odom_frame_id_, base_link_frame_id_));
       }
 
       // fill odometry and pose msg
-      tf::poseTFToMsg(base_transform, odom_msg.pose.pose);
+      tf::poseTFToMsg(base_transform_, odom_msg.pose.pose);
       pose_msg.pose = odom_msg.pose.pose;
 
       // can we calculate velocities?
@@ -184,6 +200,7 @@ protected:
       }
       // TODO integrate covariance for pose covariance
       last_time_ = image_msg->header.stamp;
+      last_published_tf_time_ = image_msg->header.stamp;
     }
     else
     {
@@ -343,8 +360,10 @@ private:
   fovis::VisualOdometryOptions visual_odometer_options_;
 
   ros::Time last_time_;
+  ros::Time last_published_tf_time_;
 
   // tf related
+  tf::Transform base_transform_;
   std::string sensor_frame_id_;
   std::string odom_frame_id_;
   std::string base_link_frame_id_;
