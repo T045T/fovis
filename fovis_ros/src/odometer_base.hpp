@@ -156,6 +156,9 @@ protected:
       base_transform_ = 
         initial_base_to_sensor_ * sensor_pose * current_base_to_sensor.inverse();
 
+      // multiply the translation part of the tf with correction factor
+      base_transform_.setOrigin( base_transform_.getOrigin() * translation_correction_factor_ );
+      
       // publish transform
       if (publish_tf_)
       {
@@ -297,6 +300,12 @@ private:
     nh_local_.param("base_link_frame_id", base_link_frame_id_, std::string("/base_link"));
     nh_local_.param("publish_tf", publish_tf_, true);
 
+    nh_local_.param<double>("tf_factor", translation_correction_factor_, 1.f);
+    if (translation_correction_factor_ == 0.f)
+    {
+      translation_correction_factor_ = 1.f;
+    }
+
     for (fovis::VisualOdometryOptions::iterator iter = visual_odometer_options_.begin();
         iter != visual_odometer_options_.end();
         ++iter)
@@ -364,6 +373,7 @@ private:
 
   // tf related
   tf::Transform base_transform_;
+  double translation_correction_factor_;
   std::string sensor_frame_id_;
   std::string odom_frame_id_;
   std::string base_link_frame_id_;
