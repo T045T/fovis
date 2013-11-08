@@ -45,6 +45,7 @@ protected:
     rectification_(NULL),
     depth_source_(NULL),
     visual_odometer_options_(fovis::VisualOdometry::getDefaultOptions()),
+    reset_odometer_(false),
     nh_local_("~"),
     it_(nh_local_)
   {
@@ -147,15 +148,36 @@ protected:
       const Eigen::Isometry3d& pose = visual_odometer_->getPose();
       tf::Transform sensor_pose;
       eigenToTF(pose, sensor_pose);
+
       // calculate transform of odom to base based on base to sensor 
       // and sensor to sensor
       tf::StampedTransform current_base_to_sensor;
       getBaseToSensorTransform(
           image_msg->header.stamp, image_msg->header.frame_id, 
           current_base_to_sensor);
+
+      // check for NaN in fovis transform
+      {
+	tf::Vector3 o = sensor_pose.getOrigin();
+	tf::Quaternion q = sensor_pose.getRotation();
+	if ( std::isnan(o.getX())
+	     || std::isnan(o.getY())
+	     || std::isnan(o.getZ())
+	     || std::isnan(q.getX())
+	     || std::isnan(q.getY())
+	     || std::isnan(q.getZ())
+	     || std::isnan(q.getW()) ) {
+	  ROS_ERROR("NaN value in fovis tf... Resetting odometer");
+	  // re-initialize odometer pose - last transmitted base_transform_ (i.e. without NaNs) * current base to sensor
+	  initial_base_to_sensor_ = tf::StampedTransform(base_transform_ * current_base_to_sensor, image_msg->header.stamp, odom_frame_id_, base_link_frame_id_);
+	  visual_odometer_ = NULL;
+	  reset_odometer_ = true;
+	  return;
+	}
+      }
+
       base_transform_ = 
         initial_base_to_sensor_ * sensor_pose * current_base_to_sensor.inverse();
-
       // multiply the translation part of the tf with correction factor
       base_transform_.setOrigin( base_transform_.getOrigin() * translation_correction_factor_ );
       
@@ -272,10 +294,18 @@ private:
     visual_odometer_ = 
       new fovis::VisualOdometry(rectification, visual_odometer_options_);
 
-    // store initial transform for later usage
-    getBaseToSensorTransform(info_msg->header.stamp, 
-        info_msg->header.frame_id,
-        initial_base_to_sensor_);
+    // only lookup initial transform on first run, not when resetting
+    if (!reset_odometer_)
+    {
+      // store initial transform for later usage
+      getBaseToSensorTransform(info_msg->header.stamp, 
+			       info_msg->header.frame_id,
+			       initial_base_to_sensor_);
+    }
+    else
+    {
+      reset_odometer_ = false;
+    }
 
     // print options
     std::stringstream info;
@@ -367,6 +397,7 @@ private:
   fovis::Rectification* rectification_;
   fovis::DepthSource* depth_source_;
   fovis::VisualOdometryOptions visual_odometer_options_;
+  bool reset_odometer_;
 
   ros::Time last_time_;
   ros::Time last_published_tf_time_;
