@@ -229,7 +229,7 @@ protected:
     }
     else
     {
-      ROS_ERROR_STREAM("fovis odometry failed: " << 
+      ROS_WARN_STREAM("fovis odometry failed: " << 
           fovis::MotionEstimateStatusCodeStrings[status]);
       last_time_ = ros::Time(0);
     }
