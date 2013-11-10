@@ -41,6 +41,7 @@ public:
 protected:
 
   OdometerBase() : 
+    odometer_mutex_(),
     visual_odometer_(NULL),
     rectification_(NULL),
     depth_source_(NULL),
@@ -49,6 +50,7 @@ protected:
     nh_local_("~"),
     it_(nh_local_)
   {
+    boost::mutex::scoped_lock lock(odometer_mutex_);
     base_transform_.setIdentity();
 
     loadParams();
@@ -89,6 +91,22 @@ protected:
   }
 
   /**
+   * To be called when you want the visual odometry to be
+   * reinitialized (resets odometry to base link transform to
+   * identity).
+   */
+  void processReinitFovis()
+  {
+    boost::mutex::scoped_lock lock(odometer_mutex_);
+    if (visual_odometer_)
+    {
+      ROS_INFO("Reinitializing Fovis");
+      delete visual_odometer_;
+      visual_odometer_ = NULL;
+    }
+  }
+
+  /**
    * To be called by implementing classes after the depth source has
    * been fed with data.
    */
@@ -96,6 +114,7 @@ protected:
       const sensor_msgs::ImageConstPtr& image_msg, 
       const sensor_msgs::CameraInfoConstPtr& info_msg)
   {
+    boost::mutex::scoped_lock lock(odometer_mutex_);
     ros::WallTime start_time = ros::WallTime::now();
 
     bool first_run = false;
@@ -392,6 +411,7 @@ private:
 
 
 private:
+  boost::mutex odometer_mutex_;
 
   fovis::VisualOdometry* visual_odometer_;
   fovis::Rectification* rectification_;

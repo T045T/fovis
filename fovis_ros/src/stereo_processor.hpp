@@ -4,6 +4,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <std_msgs/Empty.h>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
@@ -28,6 +29,7 @@ private:
   // subscriber
   image_transport::SubscriberFilter left_sub_, right_sub_;
   message_filters::Subscriber<sensor_msgs::CameraInfo> left_info_sub_, right_info_sub_;
+  ros::Subscriber reinit_fovis_sub_;
   typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> ExactPolicy;
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> ApproximatePolicy;
   typedef message_filters::Synchronizer<ExactPolicy> ExactSync;
@@ -44,6 +46,11 @@ private:
   static void increment(int* value)
   {
     ++(*value);
+  }
+
+  void reinitFovis(const std_msgs::EmptyConstPtr&)
+  {
+    reinitFovisCallback();
   }
 
   void dataCb(const sensor_msgs::ImageConstPtr& l_image_msg,
@@ -127,6 +134,9 @@ protected:
     check_synced_timer_ = nh.createWallTimer(ros::WallDuration(15.0),
                                              boost::bind(&StereoProcessor::checkInputsSynchronized, this));
 
+    // Reinitialization topic
+    reinit_fovis_sub_ = nh.subscribe("reinitialize", 1, &StereoProcessor::reinitFovis, this);
+
     // Synchronize input topics. Optionally do approximate synchronization.
     local_nh.param("queue_size", queue_size_, 5);
     bool approx;
@@ -153,6 +163,7 @@ protected:
                              const sensor_msgs::CameraInfoConstPtr& l_info_msg,
                              const sensor_msgs::CameraInfoConstPtr& r_info_msg) = 0;
 
+  virtual void reinitFovisCallback() = 0;
 };
 
 } // end of namespace

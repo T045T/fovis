@@ -78,6 +78,11 @@ protected:
     // call base implementation
     process(image_msg, image_info_msg);
   }
+
+  void reinitFovisCallback()
+  {
+    processReinitFovis();
+  }
 };
 
 } // end of namespace
