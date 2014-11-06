@@ -14,7 +14,7 @@
 namespace fovis_ros
 {
 
-class MonoDepthOdometer : public MonoDepthProcessor, OdometerBase
+class MonoDepthOdometer : public MonoDepthProcessor, public OdometerBase
 {
 
 private:
@@ -78,6 +78,11 @@ protected:
     // call base implementation
     process(image_msg, image_info_msg);
   }
+
+  void reinitFovisCallback()
+  {
+    processReinitFovis();
+  }
 };
 
 } // end of namespace
@@ -88,7 +93,12 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "mono_depth_odometer");
   std::string transport = argc > 1 ? argv[1] : "raw";
   fovis_ros::MonoDepthOdometer odometer(transport);
-  ros::spin();
+  ros::Rate r(50);
+  while(ros::ok()) {
+    ros::spinOnce();
+    odometer.publishLastKnownTf();
+    r.sleep();
+  }
   return 0;
 }
 

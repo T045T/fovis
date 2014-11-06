@@ -24,16 +24,35 @@ namespace fovis_ros
 class OdometerBase
 {
 
+public:
+  void publishLastKnownTf()
+  {
+    if ( publish_tf_ 
+         && (ros::Time::now() - last_published_tf_time_ > ros::Duration(9.0)))
+    {
+      last_published_tf_time_ = ros::Time::now();
+      tf_broadcaster_.sendTransform(
+        tf::StampedTransform(base_transform_, last_published_tf_time_,
+                             odom_frame_id_, base_link_frame_id_));
+      
+    }
+  }
+
 protected:
 
   OdometerBase() : 
+    odometer_mutex_(),
     visual_odometer_(NULL),
     rectification_(NULL),
     depth_source_(NULL),
     visual_odometer_options_(fovis::VisualOdometry::getDefaultOptions()),
+    reset_odometer_(false),
     nh_local_("~"),
     it_(nh_local_)
   {
+    boost::mutex::scoped_lock lock(odometer_mutex_);
+    base_transform_.setIdentity();
+
     loadParams();
     odom_pub_ = nh_local_.advertise<nav_msgs::Odometry>("odometry", 1);
     pose_pub_ = nh_local_.advertise<geometry_msgs::PoseStamped>("pose", 1);
@@ -72,6 +91,22 @@ protected:
   }
 
   /**
+   * To be called when you want the visual odometry to be
+   * reinitialized (resets odometry to base link transform to
+   * identity).
+   */
+  void processReinitFovis()
+  {
+    boost::mutex::scoped_lock lock(odometer_mutex_);
+    if (visual_odometer_)
+    {
+      ROS_INFO("Reinitializing Fovis");
+      delete visual_odometer_;
+      visual_odometer_ = NULL;
+    }
+  }
+
+  /**
    * To be called by implementing classes after the depth source has
    * been fed with data.
    */
@@ -79,6 +114,7 @@ protected:
       const sensor_msgs::ImageConstPtr& image_msg, 
       const sensor_msgs::CameraInfoConstPtr& info_msg)
   {
+    boost::mutex::scoped_lock lock(odometer_mutex_);
     ros::WallTime start_time = ros::WallTime::now();
 
     bool first_run = false;
@@ -130,20 +166,44 @@ protected:
       const Eigen::Isometry3d& pose = visual_odometer_->getPose();
       tf::Transform sensor_pose;
       eigenToTF(pose, sensor_pose);
+
       // calculate transform of odom to base based on base to sensor 
       // and sensor to sensor
       tf::StampedTransform current_base_to_sensor;
       getBaseToSensorTransform(
           image_msg->header.stamp, image_msg->header.frame_id, 
           current_base_to_sensor);
-      tf::Transform base_transform = 
-        initial_base_to_sensor_ * sensor_pose * current_base_to_sensor.inverse();
 
+      // check for NaN in fovis transform
+      {
+	tf::Vector3 o = sensor_pose.getOrigin();
+	tf::Quaternion q = sensor_pose.getRotation();
+	if ( std::isnan(o.getX())
+	     || std::isnan(o.getY())
+	     || std::isnan(o.getZ())
+	     || std::isnan(q.getX())
+	     || std::isnan(q.getY())
+	     || std::isnan(q.getZ())
+	     || std::isnan(q.getW()) ) {
+	  ROS_ERROR("NaN value in fovis tf... Resetting odometer");
+	  // re-initialize odometer pose - last transmitted base_transform_ (i.e. without NaNs) * current base to sensor
+	  initial_base_to_sensor_ = tf::StampedTransform(base_transform_ * current_base_to_sensor, image_msg->header.stamp, odom_frame_id_, base_link_frame_id_);
+	  visual_odometer_ = NULL;
+	  reset_odometer_ = true;
+	  return;
+	}
+      }
+
+      base_transform_ = 
+        initial_base_to_sensor_ * sensor_pose * current_base_to_sensor.inverse();
+      // multiply the translation part of the tf with correction factor
+      base_transform_.setOrigin( base_transform_.getOrigin() * translation_correction_factor_ );
+      
       // publish transform
       if (publish_tf_)
       {
         tf_broadcaster_.sendTransform(
-            tf::StampedTransform(base_transform, image_msg->header.stamp,
+            tf::StampedTransform(base_transform_, image_msg->header.stamp,
             odom_frame_id_, base_link_frame_id_));
       }
 
@@ -183,6 +243,7 @@ protected:
       }
       // TODO integrate covariance for pose covariance
       last_time_ = image_msg->header.stamp;
+      last_published_tf_time_ = image_msg->header.stamp;
     }
     else
     {
@@ -252,10 +313,18 @@ private:
     visual_odometer_ = 
       new fovis::VisualOdometry(rectification, visual_odometer_options_);
 
-    // store initial transform for later usage
-    getBaseToSensorTransform(info_msg->header.stamp, 
-        info_msg->header.frame_id,
-        initial_base_to_sensor_);
+    // only lookup initial transform on first run, not when resetting
+    if (!reset_odometer_)
+    {
+      // store initial transform for later usage
+      getBaseToSensorTransform(info_msg->header.stamp, 
+			       info_msg->header.frame_id,
+			       initial_base_to_sensor_);
+    }
+    else
+    {
+      reset_odometer_ = false;
+    }
 
     // print options
     std::stringstream info;
@@ -279,6 +348,12 @@ private:
     nh_local_.param("odom_frame_id", odom_frame_id_, std::string("/odom"));
     nh_local_.param("base_link_frame_id", base_link_frame_id_, std::string("/base_link"));
     nh_local_.param("publish_tf", publish_tf_, true);
+
+    nh_local_.param<double>("tf_factor", translation_correction_factor_, 1.f);
+    if (translation_correction_factor_ == 0.f)
+    {
+      translation_correction_factor_ = 1.f;
+    }
 
     for (fovis::VisualOdometryOptions::iterator iter = visual_odometer_options_.begin();
         iter != visual_odometer_options_.end();
@@ -306,12 +381,12 @@ private:
   {
     std::string error_msg;
     if (tf_listener_.canTransform(
-          base_link_frame_id_, sensor_frame_id, stamp, &error_msg))
+          base_link_frame_id_, sensor_frame_id, ros::Time(), &error_msg))
     {
       tf_listener_.lookupTransform(
           base_link_frame_id_,
           sensor_frame_id,
-          stamp, base_to_sensor);
+          ros::Time(), base_to_sensor);
     }
     else
     {
@@ -336,15 +411,20 @@ private:
 
 
 private:
+  boost::mutex odometer_mutex_;
 
   fovis::VisualOdometry* visual_odometer_;
   fovis::Rectification* rectification_;
   fovis::DepthSource* depth_source_;
   fovis::VisualOdometryOptions visual_odometer_options_;
+  bool reset_odometer_;
 
   ros::Time last_time_;
+  ros::Time last_published_tf_time_;
 
   // tf related
+  tf::Transform base_transform_;
+  double translation_correction_factor_;
   std::string sensor_frame_id_;
   std::string odom_frame_id_;
   std::string base_link_frame_id_;
