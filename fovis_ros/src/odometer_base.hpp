@@ -208,7 +208,7 @@ protected:
       }
 
       // fill odometry and pose msg
-      tf::poseTFToMsg(base_transform, odom_msg_.pose.pose);
+      tf::poseTFToMsg(base_transform_, odom_msg_.pose.pose);
       pose_msg_.pose = odom_msg_.pose.pose;
 
       // can we calculate velocities?
