@@ -26,10 +26,8 @@
   </group>
 
   <node pkg="fovis_ros" type="fovis_mono_depth_odometer" name="kinect_odometer" output="screen" >
-    <remap from="camera/rgb/camera_info" to="$(arg camera)/rgb/camera_info" />
-    <remap unless="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/sw_registered/camera_info" />
-    <remap if="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/camera_info" />
-    <remap from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/image_rect" />
+    <remap unless="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="camera/depth_registered/sw_registered/camera_info" />
+    <remap from="camera" to="$(arg camera)" />
     <param name="approximate_sync" type="bool" value="True" />
     <param name="odom_frame_id" type="String" value="$(arg odom_frame_id)" />
     <param name="base_link_frame_id" type="String" value="$(arg base_link_frame_id)" />
