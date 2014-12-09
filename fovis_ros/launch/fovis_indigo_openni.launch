@@ -9,25 +9,29 @@
   <arg name="publish_tf" default="true" />
   <arg name="tf_factor" default="1.0" />
 
-  <node pkg="nodelet" type="nodelet" args="manager" name="nodelet_manager" />
-  <node pkg="nodelet" type="nodelet" name="convert_openni_fovis"
-        args="load depth_image_proc/convert_metric nodelet_manager" output="screen">
-    <remap unless="$(arg hw_registered)" from="image_raw" to="$(arg camera)/depth_registered/sw_registered/image_rect_raw"/>
-    <remap if="$(arg hw_registered)" from="image_raw" to="$(arg camera)/depth_registered/hw_registered/image_rect_raw"/>
-    <remap from="image" to="$(arg camera)/depth_registered/image_rect"/>
-  </node>
+  <!-- <node pkg="nodelet" type="nodelet" args="manager" name="nodelet_manager" /> -->
+  <!-- <node pkg="nodelet" type="nodelet" name="convert_openni_fovis" -->
+  <!--       args="load depth_image_proc/convert_metric nodelet_manager" output="screen"> -->
+  <!--   <remap unless="$(arg hw_registered)" from="image_raw" to="$(arg camera)/depth_registered/sw_registered/image_rect_raw"/> -->
+  <!--   <remap if="$(arg hw_registered)" from="image_raw" to="$(arg camera)/depth_registered/hw_registered/image_rect_raw"/> -->
+  <!--   <remap from="image" to="$(arg camera)/depth_registered/image_rect"/> -->
+  <!-- </node> -->
 
-  <group ns="$(arg camera)">
-    <node pkg="image_proc" type="image_proc" name="convert_openni_fovis_rgb" output="screen" >
-      <remap from="image_raw" to="rgb/image_raw"/>
-      <remap from="camera_info" to="rgb/camera_info" />
-      <remap from="image_rect" to="rgb/image_rect"/>
-    </node>
-  </group>
+  <!-- <group ns="$(arg camera)"> -->
+  <!--   <node pkg="image_proc" type="image_proc" name="convert_openni_fovis_rgb" output="screen" > -->
+  <!--     <remap from="image_raw" to="rgb/image_raw"/> -->
+  <!--     <remap from="camera_info" to="rgb/camera_info" /> -->
+  <!--     <remap from="image_rect" to="rgb/image_rect"/> -->
+  <!--   </node> -->
+  <!-- </group> -->
+
 
   <node pkg="fovis_ros" type="fovis_mono_depth_odometer" name="kinect_odometer" output="screen" >
     <remap unless="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="camera/depth_registered/sw_registered/camera_info" />
     <remap from="camera" to="$(arg camera)" />
+    <remap from="camera/rgb/image_rect" to ="$(arg camera)/rgb/image_rect_color" />
+    <remap if="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/hw_registered/image_rect_raw"/>
+    <remap unless="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/sw_registered/image_rect_raw"/>
     <param name="approximate_sync" type="bool" value="True" />
     <param name="odom_frame_id" type="String" value="$(arg odom_frame_id)" />
     <param name="base_link_frame_id" type="String" value="$(arg base_link_frame_id)" />
