@@ -26,7 +26,7 @@
   <!-- </group> -->
 
 
-  <node pkg="fovis_ros" type="fovis_mono_depth_odometer" name="kinect_odometer" output="screen" >
+  <node pkg="fovis_ros" type="fovis_mono_depth_odometer" name="kinect_odometer" output="screen" respawn="true">
     <remap unless="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="camera/depth_registered/sw_registered/camera_info" />
     <remap from="camera" to="$(arg camera)" />
     <remap from="camera/rgb/image_rect" to ="$(arg camera)/rgb/image_rect_color" />
@@ -37,5 +37,15 @@
     <param name="base_link_frame_id" type="String" value="$(arg base_link_frame_id)" />
     <param name="publish_tf" type="bool" value="$(arg publish_tf)" />
     <param name="tf_factor" type="double" value="$(arg tf_factor)" />
+
+    <param name="max_keypoints_per_bucket" type="string" value="10" />
+    <param name="update_target_features_with_refined" type="string" value="1" />
+    <!--
+    <param name="clique_inlier_threshold" type="string" value="0.05" />
+    <param name="inlier_max_reprojection_error" type="string" value="0.5" />
+    <param name="min_features_for_estimate" type="string" value="10" />
+    <param name="max_mean_reprojection_error" type="string" value="10" />
+    <param name="target_pixels_per_feature" type="string" value="250" />
+    -->
   </node>
 </launch>
