@@ -224,9 +224,9 @@ protected:
         tf::Transform delta_base_transform = 
           current_base_to_sensor * sensor_motion * current_base_to_sensor.inverse();
         // calculate twist from delta transform
-        odom_msg_.twist.twist.linear.x = delta_base_transform.getOrigin().getX() / dt;
-        odom_msg_.twist.twist.linear.y = delta_base_transform.getOrigin().getY() / dt;
-        odom_msg_.twist.twist.linear.z = delta_base_transform.getOrigin().getZ() / dt;
+        odom_msg_.twist.twist.linear.x = translation_correction_factor_ * delta_base_transform.getOrigin().getX() / dt;
+        odom_msg_.twist.twist.linear.y = translation_correction_factor_ * delta_base_transform.getOrigin().getY() / dt;
+        odom_msg_.twist.twist.linear.z = translation_correction_factor_ * delta_base_transform.getOrigin().getZ() / dt;
         tf::Quaternion delta_rot = delta_base_transform.getRotation();
         double angle = delta_rot.getAngle();
         tf::Vector3 axis = delta_rot.getAxis();
