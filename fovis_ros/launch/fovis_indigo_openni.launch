@@ -32,20 +32,20 @@
     <remap from="camera/rgb/image_rect" to ="$(arg camera)/rgb/image_rect_color" />
     <remap if="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/hw_registered/image_rect_raw"/>
     <remap unless="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/sw_registered/image_rect_raw"/>
-    <param name="approximate_sync" type="bool" value="True" />
+    <!-- Load relevant parameters from the yaml file -->
+    <rosparam command="load" file="$(find fovis_ros)/launch/fovis_params.yaml" />
+    <param name="approximate_sync" type="bool" value="true" />
     <param name="odom_frame_id" type="String" value="$(arg odom_frame_id)" />
     <param name="base_link_frame_id" type="String" value="$(arg base_link_frame_id)" />
     <param name="publish_tf" type="bool" value="$(arg publish_tf)" />
     <param name="tf_factor" type="double" value="$(arg tf_factor)" />
 
-    <param name="max_keypoints_per_bucket" type="string" value="10" />
-    <param name="update_target_features_with_refined" type="string" value="1" />
+    <!-- The following parameters are not relevant for the SBC, since we're using a monocular RGB-D camera rather than a stereo pair -->
     <!--
-    <param name="clique_inlier_threshold" type="string" value="0.05" />
-    <param name="inlier_max_reprojection_error" type="string" value="0.5" />
-    <param name="min_features_for_estimate" type="string" value="10" />
-    <param name="max_mean_reprojection_error" type="string" value="10" />
-    <param name="target_pixels_per_feature" type="string" value="250" />
+    <param name="stereo_max_disparity" type="string" value="128" />
+    <param name="stereo_max_dist_epipolar_line" type="string" value="1.500000" />
+    <param name="stereo_max_refinement_displacement" type="string" value="1.000000" />
+    <param name="stereo_require_mutual_match" type="string" value="true" />
     -->
   </node>
 </launch>
