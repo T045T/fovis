@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- These should be the same as used with openni_launch -->
+  <arg name="camera" default="camera" />
+  <arg name="hw_registered" default="true" />
+
+  <arg name="odom_frame_id" default="odom" />
+  <arg name="base_link_frame_id" default="base_link" />
+  <arg name="publish_tf" default="true" />
+  <arg name="tf_factor" default="1.0" />
+
+  <node pkg="tf" type="static_transform_publisher" name="baselink_to_cam" args="0 0 0.5 0 0 0 base_link camera_link 50"/>
+
+  <!-- Start Kinect -->
+  <include file="$(find openni2_launch)/launch/openni2.launch">
+    <arg name="depth_registration"              value="true" />
+    <arg name="disparity_processing"            value="false"/>
+    <arg name="disparity_registered_processing" value="false"/>
+    <arg name="hw_registered_processing"        value="true" />
+    <arg name="sw_registered_processing"        value="false" />
+    <arg name="num_worker_threads"              value="2" />
+    <arg name="color_depth_synchronization"     value="true" />
+  </include>
+
+  <node pkg="fovis_ros" type="fovis_mono_depth_odometer" name="kinect_odometer" output="screen" respawn="true">
+    <remap if="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/camera_info" />
+    <remap unless="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="$(arg camera)/depth_registered/sw_registered/camera_info" />
+    <remap from="camera" to="$(arg camera)" />
+    <remap from="camera/rgb/image_rect" to ="$(arg camera)/rgb/image_rect_color" />
+    <remap if="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/hw_registered/image_rect_raw"/>
+    <remap unless="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/sw_registered/image_rect_raw"/>
+    <!-- Load relevant parameters from the yaml file -->
+    <rosparam command="load" file="$(find fovis_ros)/launch/fovis_params.yaml" />
+    <param name="approximate_sync" type="bool" value="true" />
+    <param name="odom_frame_id" type="String" value="$(arg odom_frame_id)" />
+    <param name="base_link_frame_id" type="String" value="$(arg base_link_frame_id)" />
+    <param name="publish_tf" type="bool" value="$(arg publish_tf)" />
+    <param name="tf_factor" type="double" value="$(arg tf_factor)" />
+
+    <!-- The following parameters are not relevant for the SBC, since we're using a monocular RGB-D camera rather than a stereo pair -->
+    <!--
+    <param name="stereo_max_disparity" type="string" value="128" />
+    <param name="stereo_max_dist_epipolar_line" type="string" value="1.500000" />
+    <param name="stereo_max_refinement_displacement" type="string" value="1.000000" />
+    <param name="stereo_require_mutual_match" type="string" value="true" />
+    -->
+  </node>
+</launch>
