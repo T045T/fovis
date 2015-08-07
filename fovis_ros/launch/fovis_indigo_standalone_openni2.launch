@@ -9,7 +9,7 @@
   <arg name="publish_tf" default="true" />
   <arg name="tf_factor" default="1.0" />
 
-  <node pkg="tf" type="static_transform_publisher" name="baselink_to_cam" args="0 0 0.5 0 0 0 base_link camera_link 50"/>
+  <node pkg="tf" type="static_transform_publisher" name="baselink_to_cam" args="0 0 0 0 0 0 base_link camera_link 50"/>
 
   <!-- Start Kinect -->
   <include file="$(find openni2_launch)/launch/openni2.launch">
