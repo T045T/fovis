@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+<group ns="xtion">
+<include file="$(find fovis_ros)/launch/fovis_indigo_standalone_openni2.launch">
+<arg name="base_link_frame_id" value="xtion_base_link" />
+</include>
+</group>
+<group ns="kinect">
+<include file="$(find fovis_ros)/launch/fovis_indigo_standalone_freenect.launch">
+<arg name="base_link_frame_id" value="kinect_base_link" />
+</include>
+</group>
+</launch>
