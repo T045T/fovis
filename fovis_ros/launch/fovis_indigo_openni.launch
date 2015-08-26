@@ -29,9 +29,9 @@
   <node pkg="fovis_ros" type="fovis_mono_depth_odometer" name="kinect_odometer" output="screen" respawn="true">
     <remap unless="$(arg hw_registered)" from="camera/depth_registered/camera_info" to="camera/depth_registered/sw_registered/camera_info" />
     <remap from="camera" to="$(arg camera)" />
-    <remap from="camera/rgb/image_rect" to ="$(arg camera)/rgb/image_rect_color" />
-    <remap if="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/hw_registered/image_rect_raw"/>
-    <remap unless="$(arg hw_registered)" from="camera/depth_registered/image_rect" to="$(arg camera)/depth_registered/sw_registered/image_rect_raw"/>
+    <remap from="$(arg camera)/rgb/image_rect" to ="$(arg camera)/rgb/image_rect_color" />
+    <remap if="$(arg hw_registered)" from="$(arg camera)/depth_registered/image_rect" to="$(arg camera)/depth_registered/hw_registered/image_rect_raw"/>
+    <remap unless="$(arg hw_registered)" from="$(arg camera)/depth_registered/image_rect" to="$(arg camera)/depth_registered/sw_registered/image_rect_raw"/>
     <!-- Currently don't load our custom parameters since the defaults worked pretty good with the right CPU -->
     <!--rosparam command="load" file="$(find fovis_ros)/launch/fovis_params.yaml" /-->
     <param name="approximate_sync" type="bool" value="true" />
