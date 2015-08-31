@@ -174,6 +174,11 @@ protected:
           image_msg->header.stamp, image_msg->header.frame_id, 
           current_base_to_sensor);
 
+      if (first_run)
+      {
+        previous_base_to_sensor_ = current_base_to_sensor;
+      }
+
       // check for NaN in fovis transform
       {
 	tf::Vector3 o = sensor_pose.getOrigin();
@@ -221,8 +226,20 @@ protected:
         eigenToTF(motion, sensor_motion);
         // in theory the first factor would have to be base_to_sensor of t-1
         // and not of t (irrelevant for static base to sensor anyways)
-        tf::Transform delta_base_transform = 
-          current_base_to_sensor * sensor_motion * current_base_to_sensor.inverse();
+
+        // TODO(nberg): Before we do anything else, we need to remove delta_base_to_sensor from the Twist!
+        // delta_base_to_sensor = (current_base_to_sensor * previous_base_to_sensor.inverse()) / dt
+        // (in m/s)
+
+        tf::Transform delta_base_to_sensor = (current_base_to_sensor * previous_base_to_sensor_.inverse());
+        // scale the difference by the time delta, first the translation, then rotation
+        // getOrigin() returns a reference, so we can use /=, getRotation() does not, so we are forced
+        // to user setRotation()
+        delta_base_to_sensor.getOrigin() /= dt;
+        delta_base_to_sensor.setRotation(getRotation().setRotation(delta_base_to_sensor.getRotation().getAxis(),
+                                                                   delta_base_to_sensor.getRotation().getAngle() / dt));
+        tf::Transform delta_base_transform =
+          current_base_to_sensor * sensor_motion * delta_base_to_sensor.inverse() * current_base_to_sensor.inverse();
         // calculate twist from delta transform
         odom_msg_.twist.twist.linear.x = translation_correction_factor_ * delta_base_transform.getOrigin().getX() / dt;
         odom_msg_.twist.twist.linear.y = translation_correction_factor_ * delta_base_transform.getOrigin().getY() / dt;
@@ -244,6 +261,8 @@ protected:
       // TODO integrate covariance for pose covariance
       last_time_ = image_msg->header.stamp;
       last_published_tf_time_ = image_msg->header.stamp;
+
+      previous_base_to_sensor_ = current_base_to_sensor;
     }
     else
     {
@@ -430,6 +449,7 @@ private:
   std::string base_link_frame_id_;
   bool publish_tf_;
   tf::StampedTransform initial_base_to_sensor_;
+  tf::StampedTransform previous_base_to_sensor_;
   tf::TransformListener tf_listener_;
   tf::TransformBroadcaster tf_broadcaster_;
   
