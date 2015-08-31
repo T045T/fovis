@@ -227,17 +227,11 @@ protected:
         // in theory the first factor would have to be base_to_sensor of t-1
         // and not of t (irrelevant for static base to sensor anyways)
 
-        // TODO(nberg): Before we do anything else, we need to remove delta_base_to_sensor from the Twist!
-        // delta_base_to_sensor = (current_base_to_sensor * previous_base_to_sensor.inverse()) / dt
-        // (in m/s)
+        // Before we do anything else, we need to remove delta_base_to_sensor from the Twist!
+        // delta_base_to_sensor = (current_base_to_sensor * previous_base_to_sensor.inverse()
+        // (in m)
+        tf::Transform delta_base_to_sensor = (previous_base_to_sensor_.inverse() * current_base_to_sensor);
 
-        tf::Transform delta_base_to_sensor = (current_base_to_sensor * previous_base_to_sensor_.inverse());
-        // scale the difference by the time delta, first the translation, then rotation
-        // getOrigin() returns a reference, so we can use /=, getRotation() does not, so we are forced
-        // to user setRotation()
-        delta_base_to_sensor.getOrigin() /= dt;
-        delta_base_to_sensor.setRotation(getRotation().setRotation(delta_base_to_sensor.getRotation().getAxis(),
-                                                                   delta_base_to_sensor.getRotation().getAngle() / dt));
         tf::Transform delta_base_transform =
           current_base_to_sensor * sensor_motion * delta_base_to_sensor.inverse() * current_base_to_sensor.inverse();
         // calculate twist from delta transform
